@@ -125,7 +125,7 @@ function sectionFourTreeMap() {
       .attr('class', 'sidebarListElement') // use for on click maybe?
       .on('click', function(d) {
         createSecondaryTreemapTableSectFour(d, ['Type', 'Awarded Amount', '% of Total']);
-        console.log(d);
+	//        console.log(d);
       })
       .html(String);
 
@@ -220,19 +220,29 @@ const drawMap = (container) => {
       .pointRadius(1);
 
   // D3-tip Tooltip
-  let toolTip = d3.tip()
+  let stateToolTip = d3.tip()
       .attr('class', 'd3-tip')
       .offset([-10, 0])
       .html(function(d) {
-        return "School: <span style='color:blue'>" + d.Recipient + "</span>" + "<br>"
-          + d.INSTURL + "<br>" + "Students: " + d.Total;
+	return "Count: " + d.value.length;
       });
+
+  let allToolTip = d3.tip()
+      .attr('class', 'd3-tip')
+      .offset([-10, 0])
+      .html(function(d) {
+	return "School: " + d.Recipient + "<br>"
+	  + d.INSTURL + "<br>" + "Students: " + d.Total;
+      });
+
 
   var svg = d3.select(container).append("svg")
       .attr("width", width)
       .attr("height", height);
 
-  svg.call(toolTip); // add tooltip
+  // add tooltips to map
+  svg.call(stateToolTip); 
+  svg.call(allToolTip);
 
   // what our map element is drawn on 
   let g = svg.append("g");
@@ -260,7 +270,7 @@ const drawMap = (container) => {
 
     /**
      * EDU Data Section
-     * 
+     * Work done here..
      */
     d3.csv("../data-lab-data/EDU_v2_base_data.csv", function (error, data) {
       if (error) throw error;
@@ -273,7 +283,6 @@ const drawMap = (container) => {
       let fouryear = d3.select(fourYearCheck);
       let twoyear = d3.select(twoYearCheck);
       let filterClearBtn = d3.select('.clearfilter');
-      //      filterClearBtn
 
       // Dropdown Box
       let dropDown = d3.select("#filtersDiv").append("select")
@@ -288,6 +297,7 @@ const drawMap = (container) => {
 
       options.text(function (d) { return d.Recipient; })
         .attr("value", function (d) { return d.Recipient; });
+
 
       // Clear Filter Box
       let clearfilter = d3.select('#filtersDiv').append('button')
@@ -306,143 +316,58 @@ const drawMap = (container) => {
                 let long = parseFloat(d.LONGITUDE);
                 let lat = parseFloat(d.LATITUDE);
                 if (isNaN(long || lat)) { long = 0, lat = 0; }
+		if (long && lat == undefined) { long = 0, lat = 0; }
                 return "translate(" + projection([long, lat]) + ")";
               })
               .attr('r', 4)
               .style("fill", "rgb(217,91,67)")
               .style("opacity", 0.85)
-              .on('mouseover', toolTip.show)
-              .on('mouseout', toolTip.hide);
+              .on('mouseover', allToolTip.show)
+              .on('mouseout', allToolTip.hide);
             
           });
 
-      /////////////////////////
-      // PR Quadtree Section //
-      /////////////////////////
-      let clusterPoints = [];
-      let clusterRange = 45;
-      
-      let grid = svg.append('g')
-          .attr('class', 'grid');
-      
-      for (let x = 0; x <= width; x += clusterRange) {
-        for (let y = 0; y <= height; y+= clusterRange) {
-          grid.append('rect')
-            .attr('x', x)
-            .attr('y', y)
-            .attr('width', clusterRange)
-            .attr('height', clusterRange)
-            .attr('class', 'grid')
-            .attr('id', 'invisRect');
-        }
-      }
+      let stateCheck = d3.nest()
+	  .key(function(d){
+	    return d.State;
+	  }).rollup(function(leaves) {
+	    return {
+	      ...leaves, // old object plus..
+	      stateTotal: d3.sum(leaves, function(d){ return d.Total_Federal_Investment; }),
+	      length: leaves.length
+	    };
+	  }).entries(data);
 
-      // for this data structure,
-      // we need to return an Array of Arrays! (important!)
-      let latlongpoints = data.map(function(x) {
-        let point = [
-          x.LATITUDE,
-          x.LONGITUDE
-        ];
-        return point;
-      });
-      
-      //      console.log(latlongpoints); // should be array of arrays 
+      console.log(stateCheck);
 
-      let qTree = d3.quadtree()
-          .addAll(latlongpoints); // adding points to quadtree
-
-      console.log(qTree);
-
-
-      for (let a = 0; a <= width; a += clusterRange) {
-        for (let b = 0; b <= height; b += clusterRange) {
-          let searched = search(qTree, a, b, a + clusterRange, b + clusterRange);
-          //          console.log(searched); // only (3) is working?
-
-          let centerPoint = searched.reduce(function(prev, current) {
-            return [prev[0] + current[0], prev[1] + current[1]];
-          }, [0, 0]);
-          
-          centerPoint[0] = centerPoint[0] / searched.length;
-          centerPoint[1] = centerPoint[1] / searched.length;
-          centerPoint.push(searched);
-          
-          if (centerPoint[0] && centerPoint[1]) {
-            clusterPoints.push(centerPoint);
-          }
-        }
-      }
-
-      svg.selectAll("circle")
-        .data(clusterPoints)
-        .enter().append("svg:circle")
-      //        .attr("class", function(d) {return "centerPoint";})
-        .attr("cx", function(d) {return d[0];})
-        .attr("cy", function(d) {return d[1];})
-        .attr("fill", '#FFA500')
-        .attr("r", 6)
-        .on("click", function(d, i) {
-          console.log(d);
-        });
 
       // ! This is where we draw the circles on the map (working!)
-      //       svg.selectAll("circle")
-      //        .data(data)
-      //        .enter()
-      //        .append("svg:circle")
-      //        .attr("transform", function (d) {
-      //
-      //          let long = parseFloat(d.LONGITUDE);
-      //          let lat = parseFloat(d.LATITUDE);
-      //          if (isNaN(long || lat)) { long = 0, lat = 0; }
-      //          return "translate(" + projection([long, lat]) + ")";
-      //        })
-      //        .attr('r', 5)
-      //        .style("fill", "rgb(217,91,67)")
-      //        .style("opacity", 0.85)
-      //        .on('mouseover', toolTip.show)
-      //        .on('mouseout', toolTip.hide);
-
-
-      dropDown.on("change", function () {
-        let selected = this.value;
-        let displayOthers = this.checked ? "inline" : "none";
-        let display = this.checked ? "none" : "inline";
-
-        svg.selectAll("circle")
-          .filter(function (d) { return selected != d.Recipient; })
-          .attr("display", displayOthers);
-
-        svg.selectAll("circle")
-          .filter(function (d) { return selected == d.Recipient; })
-          .attr("display", display);
-      });
-
-      /**
-       * Section to check for checkbox state
-       */
-      function updateCheck() {
-        if (d3.select(public).property('checked')) {
-          svg.selectAll('circle')
-            .filter(function (d) {
-              console.log('okok' + d.INST_TYPE);
-              return 'Public 2-year' == d.INST_TYPE;
-            });
-        } else {
-          svg.selectAll("circle")
-            .data(data)
-            .enter()
-            .append("svg:circle")
-            .attr("transform", function (d) {
-              let long = parseFloat(d.LONGITUDE);
-              let lat = parseFloat(d.LATITUDE);
-              if (isNaN(long || lat)) { long = 0, lat = 0; }
-              return "translate(" + projection([long, lat]) + ")";
-            })
-            .attr('r', 5);
-        }
-      }
+      // State Version
+      svg.selectAll("circle")
+        .data(stateCheck)
+        .enter()
+        .append("svg:circle")
+        .attr("transform", function (d) {
+          let long = parseFloat(d.value[0].LONGITUDE); // pick random state to put the bubble on.. look into putting into center of state itself.
+          let lat = parseFloat(d.value[0].LATITUDE);
+          if (isNaN(long || lat)) { long = 0, lat = 0; }
+	  if (long && lat == undefined) { long = 0, lat = 0; }
+          return "translate(" + projection([long, lat]) + ")";
+        })
+        .attr('r', 16)
+	.style('fill', function(d){
+	  if (d.value.stateTotal > 2067321200) { // random big number to test against. (subject to change)
+	    return "Red";
+	  } else {
+	    return "Orange";
+	  }
+	})
+        .style("opacity", 0.85)
+	.text(function(d){
+	  return d.value.length;
+	})
+        .on('mouseover', stateToolTip.show)
+        .on('mouseout', stateToolTip.hide);
 
     });
   }); // end of double d3 zone 
