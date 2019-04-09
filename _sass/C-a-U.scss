@@ -6,11 +6,6 @@ $checked-color: #1877c1;
 $unchecked-color: #888;
 
 .CU {
-/*
- --------------------------------------------------------------------------------------------------------------------
-*   PAGE LANDING
-*--------------------------------------------------------------------------------------------------------------------
-*/
 
   .sectionLanding {
 
@@ -764,15 +759,8 @@ $unchecked-color: #888;
 
   #sectionFourtableContainerDiv {
     display: none;
-    margin-top: 100px;
-    flex-direction: row;
-    margin: 75px auto;
-    justify-content: space-around;
-  }
-
-  #sectionFourTreemapContainerDiv {
-    display: none;
-    margin-top: 100px;
+    padding-top: 3rem;
+    justify-content: center;
   }
 
   #invisRect {

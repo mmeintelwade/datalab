@@ -1,9 +1,6 @@
-/*
-  --------------------------------------------------------------------------------------------------------------------
-  *   declarations
-  *--------------------------------------------------------------------------------------------------------------------
-  */
 const mapContainer = document.getElementById('collegesMap');
+const sectFourTableContainer = document.getElementById('sectionFourtableContainerDiv');
+
 const publicCheck = document.getElementById('publicCheck');
 const privateCheck = document.getElementById('privateCheck');
 const fourYearCheck = document.getElementById('fourYearCheck');
@@ -13,70 +10,66 @@ const sectionFourtableBtn = document.getElementById('sectionFourTableBtn');
 const sectionFourmapBtn = document.getElementById('sectionFourMapBtn');
 const sectionFourtreemapBtn = document.getElementById('sectionFourTreemapBtn');
 
+function createSectFourTable(container, columns) {
+  d3.csv('../data-lab-data/EDU_v2_base_data.csv', function(err, data) {
 
-// Find the nodes within the specified rectangle.
-function search(quadtree, x0, y0, x3, y3) {
-  let validData = [];
-  quadtree.visit(function(node, x1, y1, x2, y2) {
-    var p = node.data;
-    if (p) {
-      p.selected = (p[0] >= x0) && (p[0] < x3) && (p[1] >= y0) && (p[1] < y3);
-      if (p.selected) {
-        validData.push(p);
-      }
-    }
-    return x1 >= x3 || y1 >= y3 || x2 < x0 || y2 < y0;
-  });
-  return validData;
-}
+    // let stateCheck = d3.nest()
+    // 	.key(function(d){
+    // 	  return d.State;
+    // 	}).rollup(function(leaves) {
+    // 	  return {
+    // 	    ...leaves, // old object plus..
+    // 	    stateTotal: d3.sum(leaves, function(d){ return d.Total_Federal_Investment; }),
+    // 	    length: leaves.length
+    // 	  };
+    // 	}).entries(data);
 
-/**
- * 
- * @param {*} parentName - name to search by
- * Secondary Table (Investment) for Click event on treemap li
- * Need to grab different data than "tableData" in last table draw
- */
-function createSecondaryTreemapTableSectFour(parentName, columns) {
-  d3.csv("/data-lab-data/Edu_PSC.csv", function (error, data) {
+    // console.log(stateCheck);
+//    console.log(data);
 
-    d3.select('#sectionFourTreemapSidebarTable').remove(); // remove on click data 
+    if (err) { return err; }
 
     /**
-     * Create Secondary Table (Investment Types Table)
+     * Table START
      */
-    let subTableDiv = d3.select('#sectionFourTreemapContainerDiv').append('div')
-        .attr('id', 'sectionFourTreemapSidebarTable');
-    let subTableHeaderText = subTableDiv.append('h4').html(parentName); //replace with data TR name...
-    subTableHeaderText.append('hr')
-      .style('width', '30%')
-      .style('display', 'flex');
-    subTableHeaderText.append('p').html('Investment Types').attr('class', 'investmenth4');
-    let subTable = subTableDiv.append('table')
-        .attr('class', 'subTableData')
-        .attr('align', 'center');
+    let sortAscending = true;
+    let table = d3.select(container).append('table')
+    //        .attr('class', '')
+        .attr('id', 'sectFourTable'); // id given to table for Datatables.js
 
-    // this is all subject to change once i get some real data, woohoo
-    let titles = ['Type', 'Awarded Amount  ', '  % of Total'];
-    let mockData = [
-      { "Type": "Grant: Student", "Awarded Amount": "$1000", "% of Total": "20%" },
-      { "Type": "Grant: Student", "Awarded Amount": "$1000", "% of Total": "20%" },
-      { "Type": "Grant: Student", "Awarded Amount": "$1000", "% of Total": "20%" },
-      { "Type": "Grant: Student", "Awarded Amount": "$1000", "% of Total": "20%" },
-      { "Type": "Grant: Student", "Awarded Amount": "$1000", "% of Total": "20%" },
-    ];
+    let titles = ['Recipient', 'State', 'Total Students', 'Total Federal Investment'];
 
-    let headers = subTable.append('thead').append('tr')
+    let rows = table.append('tbody')
+        .selectAll('tr')
+        .data(data).enter()
+        .append('tr')
+        .on('click', function (d) {
+	  // secondary table view
+	  //          createSecondaryTableView(d.name, ['Type', 'Awarded Amount', '% of Total']); // going to pass in the row value and columns we want
+        });
+
+
+    let headers = table.append('thead').append('tr')
         .selectAll('th')
         .data(titles).enter()
         .append('th')
         .text(function (d) {
           return d;
         });
+    // .on('click', function (d) {
+    //   headers.attr('class', 'header');
 
-    let rows = subTable.append('tbody')
-        .selectAll('tr')
-        .data(mockData).enter()
-        .append('tr');
+    //   if (sortAscending) {
+    //     rows.sort(function (a, b) { return b[d] < a[d]; });
+    //     sortAscending = false;
+    //     this.className = 'aes';
+    //   } else {
+    //     rows.sort(function (a, b) { return b[d] > a[d]; });
+    //     sortAscending = true;
+    //     this.className = 'des';
+    //   }
+    // });
+
 
     rows.selectAll('td')
       .data(function (row) {
@@ -85,121 +78,29 @@ function createSecondaryTreemapTableSectFour(parentName, columns) {
         });
       }).enter()
       .append('td')
+      .classed('name', function (d) {
+        return d.column == 'Recipient';
+      })
+      .classed('percentage', function (d) {
+        return d.column == 'State';
+      })
+      .classed('total', function (d) {
+        return d.column == 'Total';
+      })
       .text(function (d) {
         return d.value;
       })
       .attr('data-th', function (d) {
         return d.name;
       });
+
+
+    // datatable start
+    let dTable = $('#sectFourTable').dataTable();
+    console.log(dTable);
+
   });
-}
-
-/**
- * for Section4 Tree!
- * More or less the exact same as Section2...
- */
-function sectionFourTreeMap() {
-  d3.csv('../data-lab-data/EDU_v2_base_data.csv', (data) => {
-
-
-    let schools = data.map(d => d.Recipient);
-    let filteredSchools = schools.filter(function(item, index){
-      return schools.indexOf(item) >= index;
-    });
-
-
-    // Going to do Sidebar Data first.
-    // Just a simple list
-    let sidebarList = d3.select('#sectionFourTreemapSidebar')
-        .append('ul').attr('class', 'sectionFourSidebarList');
-
-    sidebarList.append('input')
-      .attr('class', 'search')
-      .attr('class', 'searchPadding')
-      .attr('placeholder', 'Search...');
-
-    sidebarList.selectAll('li')
-      .data(filteredSchools)
-      .enter()
-      .append('li')
-      .attr('class', 'sidebarListElement') // use for on click maybe?
-      .on('click', function(d) {
-        createSecondaryTreemapTableSectFour(d, ['Type', 'Awarded Amount', '% of Total']);
-	//        console.log(d);
-      })
-      .html(String);
-
-    ///////////////////////
-    // start Treemappin' // 
-    ///////////////////////
-    let width = 1000,
-        height = 600;
-
-    let color = d3.scaleOrdinal()
-        .range(d3.schemeCategory10
-               .map(function(c) { c = d3.rgb(c); c.opacity = 0.6; return c; }));
-
-    let format = d3.format(",d");
-
-    let treeMappy = d3.treemap()
-        .size([width, height])
-        .round(true)
-        .padding(1);
-
-
-    let bigTotal = data.map(i => i.Total_Federal_Investment).reduce((a,b) => a + b);
-    data.forEach(function(i) { i.parent = "rootNode"; }); // add parent property to each child of root node for stratify
-
-    let rootNode = {
-      name: 'rootNode',
-      Total_Federal_Investment: bigTotal,
-      parent: "",
-    };
-
-    data.unshift(rootNode); // add root node to beginning of array
-    //    console.log(data);
-
-    let stratify = d3.stratify()
-        .id(function(d) {
-          return d.name;
-        })
-        .parentId(function(d) { return d.parent; });
-
-    let root = stratify(data)
-        .sum(function(d) { return d.Total_Federal_Investment; })
-        .sort(function(a, b) { return b.height - a.height || b.Total_Federal_Investment - a.Total_Federal_Investment; });
-
-    let treeMapContainer = d3.select('#sectionFourTreemap') // section 4! 
-        .append('svg')
-        .style('width', width)
-        .style('height', height);
-    //        .style('position', 'relative');
-
-    treeMappy(root); // stratify and get the root ready
-
-    let leaf = treeMapContainer
-        .selectAll('g')
-        .data(root.leaves())
-        .enter().append('g')
-        .attr("transform", d => `translate(${d.x0},${d.y0})`);
-
-    leaf.append('text')
-      .attr('x', function(d) {return d.x0; })
-      .attr('y', function(d) {return d.y0; });
-    //      .text(d => {
-    //        return d.id + "\n" + format(d.value);
-    //      });
-
-    leaf.append("rect")
-      .attr("id", d => d.id)
-      .attr("fill", function(d) { var a = d.ancestors(); return color(a[a.length - 2].id); })
-      .attr("fill-opacity", 0.6)
-      .attr("width", d => d.x1 - d.x0)
-      .attr("height", d => d.y1 - d.y0);
-
-
-  }); 
-}; // end function
+};
 
 
 /*
@@ -309,21 +210,21 @@ const drawMap = (container) => {
             // a bit heavy, as we are redrawing all the circles on the DOM again. Consider a better method for production
             // redrawing map to show all points!
             svg.selectAll("circle")
-              .data(data)
-              .enter()
-              .append("svg:circle")
-              .attr("transform", function (d) {
+	      .data(data)
+	      .enter()
+	      .append("svg:circle")
+	      .attr("transform", function (d) {
                 let long = parseFloat(d.LONGITUDE);
                 let lat = parseFloat(d.LATITUDE);
                 if (isNaN(long || lat)) { long = 0, lat = 0; }
 		if (long && lat == undefined) { long = 0, lat = 0; }
                 return "translate(" + projection([long, lat]) + ")";
-              })
-              .attr('r', 4)
-              .style("fill", "rgb(217,91,67)")
-              .style("opacity", 0.85)
-              .on('mouseover', allToolTip.show)
-              .on('mouseout', allToolTip.hide);
+	      })
+	      .attr('r', 4)
+	      .style("fill", "rgb(217,91,67)")
+	      .style("opacity", 0.85)
+	      .on('mouseover', allToolTip.show)
+	      .on('mouseout', allToolTip.hide);
             
           });
 
@@ -338,7 +239,7 @@ const drawMap = (container) => {
 	    };
 	  }).entries(data);
 
-      console.log(stateCheck);
+      //      console.log(stateCheck);
 
 
       // ! This is where we draw the circles on the map (working!)
@@ -407,14 +308,15 @@ const drawMap = (container) => {
   */
 
 drawMap(mapContainer); // section 4 USA map
-sectionFourTreeMap(); // section 4 treemap
+//sectionFourTreeMap(); // section 4 treemap
+createSectFourTable(sectFourTableContainer, ['Recipient', 'State', 'Total', 'Total_Federal_Investment']);
 
 /*
   Event Handlers
 */
 $(sectionFourtableBtn).click(function() {
   console.log('clicking table button!');
-  $('#sectionFourTableContainerDiv').css('display', 'flex'); // our table!
+  $('#sectionFourtableContainerDiv').css('display', 'flex'); // our table!
   $('#sectionFourTreemapContainerDiv').css('display', 'none'); // treemap
   $('#mapContainerDiv').css('display', 'none'); // donut 
 });
@@ -423,14 +325,9 @@ $(sectionFourmapBtn).click(function() {
   console.log('clicking map button!');
   $('#mapContainerDiv').css('display', 'flex'); 
   $('#sectionFourTreemapContainerDiv').css('display', 'none'); 
+  $('#sectionFourtableContainerDiv').css('display', 'none');
 });
 
-$(sectionFourtreemapBtn).click(function() {
-  console.log('clicking treemap button!');
-  $('#sectionFourTreemapContainerDiv').css('display', 'flex'); // tree
-  $('#tableContainerDiv').css('display', 'none'); // table 
-  $('#mapContainerDiv').css('display', 'none'); // usa map
-});
 
 
 
